@@ -1,0 +1,87 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  body {
+    @apply bg-gradient-to-br from-gray-900 via-gray-900 to-black text-white;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-gray-800;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gradient-to-b from-cinema-red to-red-700 rounded-full;
+  }
+}
+
+@layer components {
+  .container-custom {
+    @apply container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-cinema-red to-red-700 text-white px-6 py-2.5 
+           rounded-lg font-semibold transition-all duration-200 
+           hover:scale-105 hover:shadow-lg active:scale-95;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-700 text-white px-6 py-2.5 rounded-lg font-semibold
+           transition-all duration-200 hover:bg-gray-600 hover:scale-105;
+  }
+  
+  .card {
+    @apply bg-gray-800/50 backdrop-blur-sm rounded-xl overflow-hidden 
+           shadow-xl transition-all duration-300 hover:transform 
+           hover:scale-105 hover:shadow-2xl border border-gray-700;
+  }
+  
+  .seat-available {
+    @apply w-10 h-10 m-1 bg-green-600 rounded-t-lg cursor-pointer 
+           transition-all duration-200 hover:scale-110 hover:bg-green-500;
+  }
+  
+  .seat-selected {
+    @apply w-10 h-10 m-1 bg-yellow-500 rounded-t-lg cursor-pointer 
+           transition-all duration-200 hover:scale-110;
+  }
+  
+  .seat-booked {
+    @apply w-10 h-10 m-1 bg-red-600 rounded-t-lg cursor-not-allowed opacity-60;
+  }
+  
+  .seat-vip {
+    @apply w-10 h-10 m-1 bg-purple-600 rounded-t-lg cursor-pointer 
+           transition-all duration-200 hover:scale-110 hover:bg-purple-500;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
