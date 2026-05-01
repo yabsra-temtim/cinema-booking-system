@@ -1,3 +1,4 @@
+const { validationResult } = require('express-validator');
 const Seat = require('../models/Seat');
 const Showtime = require('../models/Showtime');
 
@@ -32,11 +33,26 @@ exports.getSeatLayout = async (req, res) => {
 // @desc    Lock seats temporarily
 // @route   POST /api/seats/lock
 exports.lockSeats = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
-    const { showtimeId, seats, userId } = req.body;
+    const { showtimeId, seats } = req.body;
+    const userId = req.user.id;
+
+    if (!showtimeId || !Array.isArray(seats) || seats.length === 0) {
+      return res.status(400).json({ success: false, message: 'Showtime ID and seats are required' });
+    }
+
     const lockExpiry = new Date(Date.now() + 5 * 60000); // 5 minutes
-    
+
     for (const seat of seats) {
+      if (typeof seat !== 'string') {
+        return res.status(400).json({ success: false, message: 'Each seat must be a valid string identifier' });
+      }
+
       await Seat.findOneAndUpdate(
         { showtimeId, seatId: seat },
         {
@@ -48,7 +64,7 @@ exports.lockSeats = async (req, res) => {
         { upsert: true }
       );
     }
-    
+
     res.json({ success: true, message: 'Seats locked for 5 minutes' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Server error' });

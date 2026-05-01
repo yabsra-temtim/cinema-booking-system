@@ -1,3 +1,4 @@
+const { validationResult } = require('express-validator');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
@@ -10,6 +11,11 @@ const generateToken = (id) => {
 // @desc    Register user
 // @route   POST /api/auth/register
 exports.register = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
     const { name, email, password } = req.body;
 
@@ -45,6 +51,11 @@ exports.register = async (req, res) => {
 // @desc    Login user
 // @route   POST /api/auth/login
 exports.login = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
     const { email, password } = req.body;
 

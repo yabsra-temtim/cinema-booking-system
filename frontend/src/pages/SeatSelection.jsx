@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FaChair, FaArrowLeft } from 'react-icons/fa';
 import { showtimes, movies, theaters } from '../data/mockData';
+import { AuthContext } from '../context/AuthContext';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 const SeatSelection = () => {
   const { showtimeId } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext);
   const [selectedSeats, setSelectedSeats] = useState([]);
   const [bookedSeats, setBookedSeats] = useState([]);
   
@@ -41,20 +45,36 @@ const SeatSelection = () => {
     }, 0);
   };
 
-  const handleProceed = () => {
+  const handleProceed = async () => {
+    if (!user) {
+      toast.error('You must be logged in to proceed');
+      return navigate('/login');
+    }
+
     if (selectedSeats.length === 0) {
-      alert('Please select at least one seat');
+      toast.error('Please select at least one seat');
       return;
     }
-    navigate('/checkout', { 
-      state: { 
-        showtime, 
-        movie, 
-        theater, 
-        selectedSeats, 
-        totalAmount: calculateTotal()
-      } 
-    });
+
+    try {
+      await api.post('/seats/lock', {
+        showtimeId: showtime.id.toString(),
+        seats: selectedSeats
+      });
+
+      navigate('/checkout', {
+        state: {
+          showtime,
+          movie,
+          theater,
+          selectedSeats,
+          totalAmount: calculateTotal()
+        }
+      });
+    } catch (error) {
+      const message = error.response?.data?.message || 'Unable to lock selected seats';
+      toast.error(message);
+    }
   };
 
   if (!showtime || !movie) {

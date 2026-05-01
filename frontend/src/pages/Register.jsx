@@ -77,6 +77,7 @@ const Register = () => {
                 required
               />
             </div>
+            <p className="text-xs text-gray-400 mt-1">Password must be at least 6 characters long</p>
           </div>
           
           <div>

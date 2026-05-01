@@ -1,3 +1,4 @@
+const { validationResult } = require('express-validator');
 const Booking = require('../models/Booking');
 const Seat = require('../models/Seat');
 const Showtime = require('../models/Showtime');
@@ -5,8 +6,13 @@ const Showtime = require('../models/Showtime');
 // @desc    Create booking
 // @route   POST /api/bookings
 exports.createBooking = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
-    const { showtimeId, seats, totalAmount } = req.body;
+    const { showtimeId, seats, totalAmount, movieTitle, theaterName, screenNumber, date, startTime } = req.body;
     const userId = req.user.id;
 
     // Check if seats are still available
@@ -29,6 +35,11 @@ exports.createBooking = async (req, res) => {
     const booking = await Booking.create({
       userId,
       showtimeId,
+      movieTitle,
+      theaterName,
+      screenNumber,
+      date,
+      startTime,
       seats,
       totalAmount,
       paymentStatus: 'completed',
@@ -57,7 +68,6 @@ exports.createBooking = async (req, res) => {
 exports.getMyBookings = async (req, res) => {
   try {
     const bookings = await Booking.find({ userId: req.user.id })
-      .populate('showtimeId')
       .sort({ bookingDate: -1 });
     res.json({ success: true, data: bookings });
   } catch (error) {
@@ -68,6 +78,11 @@ exports.getMyBookings = async (req, res) => {
 // @desc    Get booking by ID
 // @route   GET /api/bookings/:id
 exports.getBooking = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
     const booking = await Booking.findById(req.params.id)
       .populate('showtimeId')
@@ -91,6 +106,11 @@ exports.getBooking = async (req, res) => {
 // @desc    Cancel booking
 // @route   PUT /api/bookings/:id/cancel
 exports.cancelBooking = async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ success: false, errors: errors.array() });
+  }
+
   try {
     const booking = await Booking.findById(req.params.id);
     

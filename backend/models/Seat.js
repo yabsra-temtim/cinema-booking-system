@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 
 const seatSchema = new mongoose.Schema({
   showtimeId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Showtime',
+    type: String,
     required: true
   },
   seatId: {

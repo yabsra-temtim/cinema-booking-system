@@ -1,8 +1,9 @@
- import React, { useState, useContext } from 'react';
+ import React, { useState, useContext, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { FaCreditCard, FaPaypal, FaMoneyBillWave, FaTicketAlt } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import api from '../utils/api';
 
 const Checkout = () => {
   const location = useLocation();
@@ -29,34 +30,43 @@ const Checkout = () => {
   }
 
   const handlePayment = async () => {
+    if (!user) {
+      toast.error('You must be logged in to complete booking');
+      return navigate('/login');
+    }
+
     setProcessing(true);
-    
-    // Mock payment processing
-    setTimeout(() => {
-      setProcessing(false);
-      
-      // Create booking object
-      const booking = {
-        id: Date.now(),
-        movie: movie.title,
-        theater: theater.name,
-        screen: showtime.screen,
-        date: showtime.date,
-        time: showtime.startTime,
-        seats: selectedSeats,
-        totalAmount: totalAmount,
-        bookingDate: new Date().toISOString(),
-        qrCode: `TICKET-${Date.now()}-${Math.random().toString(36).substr(2, 6).toUpperCase()}`
+
+    const seatItems = selectedSeats.map((seatId) => {
+      const row = seatId.charAt(0);
+      const number = Number(seatId.slice(1));
+      return {
+        row,
+        number,
+        type: ['E', 'F'].includes(row) ? 'vip' : 'regular'
       };
-      
-      // Save to localStorage
-      const existingBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-      existingBookings.push(booking);
-      localStorage.setItem('bookings', JSON.stringify(existingBookings));
-      
+    });
+
+    try {
+      const response = await api.post('/bookings', {
+        showtimeId: showtime.id.toString(),
+        movieTitle: movie.title,
+        theaterName: theater.name,
+        screenNumber: showtime.screen.toString(),
+        date: showtime.date,
+        startTime: showtime.startTime,
+        seats: seatItems,
+        totalAmount
+      });
+
+      setProcessing(false);
       toast.success('Booking successful!');
-      navigate('/my-bookings', { state: { newBooking: booking } });
-    }, 2000);
+      navigate('/my-bookings');
+    } catch (error) {
+      setProcessing(false);
+      const message = error.response?.data?.message || 'Booking failed';
+      toast.error(message);
+    }
   };
 
   return (

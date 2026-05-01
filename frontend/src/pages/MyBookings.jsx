@@ -2,6 +2,8 @@
 import { useLocation } from 'react-router-dom';
 import { FaTicketAlt, FaCalendar, FaClock, FaMapMarker, FaChair, FaDownload } from 'react-icons/fa';
 import { QRCodeCanvas } from 'qrcode.react';
+import api from '../utils/api';
+import toast from 'react-hot-toast';
 
 const MyBookings = () => {
   const location = useLocation();
@@ -9,19 +11,23 @@ const MyBookings = () => {
   const [selectedBooking, setSelectedBooking] = useState(null);
 
   useEffect(() => {
-    const storedBookings = JSON.parse(localStorage.getItem('bookings') || '[]');
-    if (location.state?.newBooking) {
-      setBookings([location.state.newBooking, ...storedBookings]);
-    } else {
-      setBookings(storedBookings);
-    }
+    const fetchBookings = async () => {
+      try {
+        const response = await api.get('/bookings/my');
+        setBookings(response.data.data);
+      } catch (error) {
+        toast.error(error.response?.data?.message || 'Failed to load bookings');
+      }
+    };
+
+    fetchBookings();
   }, [location.state]);
 
   const handleDownloadTicket = (booking) => {
     const ticketHtml = `
       <html>
         <head>
-          <title>CineBook Ticket - ${booking.movie}</title>
+          <title>CineBook Ticket - ${booking.movieTitle}</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 40px; }
             .ticket { border: 2px solid #E50914; border-radius: 10px; padding: 20px; max-width: 500px; margin: 0 auto; }
@@ -31,13 +37,13 @@ const MyBookings = () => {
         <body>
           <div class="ticket">
             <h2>CineBook</h2>
-            <h3 class="movie-title">${booking.movie}</h3>
-            <p>Theater: ${booking.theater}</p>
+            <h3 class="movie-title">${booking.movieTitle}</h3>
+            <p>Theater: ${booking.theaterName}</p>
             <p>Date: ${booking.date}</p>
-            <p>Time: ${booking.time}</p>
+            <p>Time: ${booking.startTime}</p>
             <p>Seats: ${booking.seats.join(', ')}</p>
             <p>Amount: $${booking.totalAmount}</p>
-            <p>Booking ID: ${booking.id}</p>
+            <p>Booking ID: ${booking._id}</p>
           </div>
         </body>
       </html>
@@ -47,7 +53,7 @@ const MyBookings = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `ticket-${booking.movie.replace(/\s/g, '-')}.html`;
+    a.download = `ticket-${booking.movieTitle.replace(/\s/g, '-')}.html`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -75,14 +81,14 @@ const MyBookings = () => {
           <div className="lg:col-span-2 space-y-4">
             {bookings.map((booking) => (
               <div 
-                key={booking.id} 
+                key={booking._id} 
                 className="bg-gray-800/50 rounded-xl p-6 border border-gray-700 hover:border-cinema-red transition cursor-pointer"
                 onClick={() => setSelectedBooking(booking)}
               >
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-xl font-bold text-cinema-red">{booking.movie}</h3>
-                    <p className="text-sm text-gray-400">Booking ID: {booking.id}</p>
+                    <h3 className="text-xl font-bold text-cinema-red">{booking.movieTitle}</h3>
+                    <p className="text-sm text-gray-400">Booking ID: {booking._id}</p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-400">{new Date(booking.bookingDate).toLocaleDateString()}</p>
@@ -93,7 +99,7 @@ const MyBookings = () => {
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center space-x-2">
                     <FaMapMarker className="text-gray-400" />
-                    <span>{booking.theater}</span>
+                    <span>{booking.theaterName}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <FaCalendar className="text-gray-400" />
@@ -101,7 +107,7 @@ const MyBookings = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <FaClock className="text-gray-400" />
-                    <span>{booking.time}</span>
+                    <span>{booking.startTime}</span>
                   </div>
                   <div className="flex items-center space-x-2">
                     <FaChair className="text-gray-400" />
@@ -131,11 +137,11 @@ const MyBookings = () => {
                 <QRCodeCanvas value={selectedBooking.qrCode} size={150} className="mx-auto" />
               </div>
               <div className="space-y-2 text-sm">
-                <p><strong>Movie:</strong> {selectedBooking.movie}</p>
-                <p><strong>Theater:</strong> {selectedBooking.theater}</p>
-                <p><strong>Screen:</strong> {selectedBooking.screen}</p>
+                <p><strong>Movie:</strong> {selectedBooking.movieTitle}</p>
+                <p><strong>Theater:</strong> {selectedBooking.theaterName}</p>
+                <p><strong>Screen:</strong> {selectedBooking.screenNumber}</p>
                 <p><strong>Date:</strong> {selectedBooking.date}</p>
-                <p><strong>Time:</strong> {selectedBooking.time}</p>
+                <p><strong>Time:</strong> {selectedBooking.startTime}</p>
                 <p><strong>Seats:</strong> {selectedBooking.seats.join(', ')}</p>
                 <hr className="border-gray-700 my-2" />
                 <p className="text-center text-xs text-gray-400">
