@@ -13,12 +13,16 @@ const authRoutes = require('./routes/authRoutes');
 const movieRoutes = require('./routes/movieRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const seatRoutes = require('./routes/seatRoutes');
+const showtimeRoutes = require('./routes/showtimeRoutes');
+const theaterRoutes = require('./routes/theaterRoutes');
+const userRoutes = require('./routes/userRoutes');
+const errorMiddleware = require('./middleware/errorMiddleware');
 
 const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174"],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true
   }
@@ -27,7 +31,7 @@ const io = new Server(httpServer, {
 // Body parser
 app.use(express.json());
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: ["http://localhost:5173", "http://localhost:5174"],
   credentials: true
 }));
 
@@ -54,15 +58,11 @@ app.use('/api/auth', authRoutes);
 app.use('/api/movies', movieRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/seats', seatRoutes);
-
+app.use('/api/showtimes', showtimeRoutes);
+app.use('/api/theaters', theaterRoutes);
+app.use('/api/users', userRoutes);
 // Error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.status || 500).json({
-    success: false,
-    message: err.message || 'Server Error'
-  });
-});
+app.use(errorMiddleware);
 
 // Connect to MongoDB and start server
 const PORT = process.env.PORT || 5000;

@@ -16,6 +16,7 @@ exports.getMovies = async (req, res) => {
     const movies = await Movie.find(query).sort({ releaseDate: -1 });
     res.json({ success: true, count: movies.length, data: movies });
   } catch (error) {
+    console.error('Error in getMovies:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -30,6 +31,7 @@ exports.getMovie = async (req, res) => {
     }
     res.json({ success: true, data: movie });
   } catch (error) {
+    console.error('Error in getMovie:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -38,9 +40,11 @@ exports.getMovie = async (req, res) => {
 // @route   POST /api/movies
 exports.createMovie = async (req, res) => {
   try {
+    console.log('Creating movie with data:', req.body);
     const movie = await Movie.create(req.body);
     res.status(201).json({ success: true, data: movie });
   } catch (error) {
+    console.error('Error in createMovie:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -58,6 +62,7 @@ exports.updateMovie = async (req, res) => {
     }
     res.json({ success: true, data: movie });
   } catch (error) {
+    console.error('Error in updateMovie:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -72,6 +77,7 @@ exports.deleteMovie = async (req, res) => {
     }
     res.json({ success: true, data: {} });
   } catch (error) {
+    console.error('Error in deleteMovie:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };

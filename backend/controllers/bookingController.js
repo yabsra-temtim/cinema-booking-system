@@ -6,59 +6,80 @@ const Showtime = require('../models/Showtime');
 // @desc    Create booking
 // @route   POST /api/bookings
 exports.createBooking = async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({ success: false, errors: errors.array() });
-  }
-
   try {
-    const { showtimeId, seats, totalAmount, movieTitle, theaterName, screenNumber, date, startTime } = req.body;
+    const { showtimeId, seats, totalAmount, paymentMethod } = req.body;
     const userId = req.user.id;
 
-    // Check if seats are still available
-    for (const seat of seats) {
-      const seatDoc = await Seat.findOne({
-        showtimeId,
-        seatId: `${seat.row}${seat.number}`,
-        status: { $in: ['booked', 'locked'] }
-      });
-      
-      if (seatDoc) {
-        return res.status(400).json({
-          success: false,
-          message: `Seat ${seat.row}${seat.number} is no longer available`
-        });
-      }
+    // Fetch showtime with populated movie and theater
+    const showtime = await Showtime.findById(showtimeId)
+      .populate('movieId')
+      .populate('theaterId');
+
+    if (!showtime) {
+      return res.status(404).json({ success: false, message: 'Showtime not found' });
     }
+
+    // Check if seats are still available
+    const unavailableSeats = await Seat.find({
+      showtimeId,
+      seatId: { $in: seats },
+      status: 'booked'
+    });
+    
+    if (unavailableSeats.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `Some seats are no longer available: ${unavailableSeats.map(s => s.seatId).join(', ')}`
+      });
+    }
+
+    // Map seatIds to the structure expected by the model
+    const seatItems = seats.map(seatId => ({
+      row: seatId.charAt(0),
+      number: parseInt(seatId.substring(1)),
+      type: seatId.charAt(0) >= 'E' ? 'vip' : 'regular' // Simple logic or fetch from Seat model
+    }));
 
     // Create booking
     const booking = await Booking.create({
       userId,
       showtimeId,
-      movieTitle,
-      theaterName,
-      screenNumber,
-      date,
-      startTime,
-      seats,
+      movieTitle: showtime.movieId.title,
+      theaterName: showtime.theaterId.name,
+      screenNumber: showtime.screenNumber.toString(),
+      date: showtime.date,
+      startTime: showtime.startTime,
+      seats: seatItems,
       totalAmount,
-      paymentStatus: 'completed',
+      paymentStatus: paymentMethod === 'cash' ? 'pending' : 'completed',
       bookingStatus: 'active',
       qrCode: `BOOKING-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`
     });
 
-    // Mark seats as booked
-    for (const seat of seats) {
+    // Mark seats as booked and notify via Socket.io
+    const io = req.app.get('socketio');
+    for (const seatId of seats) {
       await Seat.findOneAndUpdate(
-        { showtimeId, seatId: `${seat.row}${seat.number}` },
-        { status: 'booked' },
+        { showtimeId, seatId },
+        { status: 'booked', userId },
         { upsert: true }
       );
+      
+      if (io) {
+        io.to(showtimeId).emit('seat-updated', { seatId, status: 'booked' });
+      }
     }
 
-    res.status(201).json({ success: true, data: booking });
+    // Mock email notification
+    console.log(`[NOTIFY] Email sent to ${req.user.email}: Booking confirmed for ${showtime.movieId.title}! Booking ID: ${booking._id}`);
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Booking confirmed! A notification has been sent to your email.',
+      data: booking 
+    });
   } catch (error) {
-    console.error(error);
+    console.error('Booking Error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -125,11 +146,20 @@ exports.cancelBooking = async (req, res) => {
     booking.bookingStatus = 'cancelled';
     await booking.save();
     
-    // Free up seats
-    await Seat.updateMany(
-      { showtimeId: booking.showtimeId, seatId: { $in: booking.seats.map(s => `${s.row}${s.number}`) } },
-      { status: 'available' }
-    );
+    // Free up seats and notify via Socket.io
+    const io = req.app.get('socketio');
+    const seatIds = booking.seats.map(s => `${s.row}${s.number}`);
+    
+    for (const seatId of seatIds) {
+      await Seat.findOneAndUpdate(
+        { showtimeId: booking.showtimeId, seatId },
+        { status: 'available', $unset: { userId: 1 } }
+      );
+      
+      if (io) {
+        io.to(booking.showtimeId).emit('seat-updated', { seatId, status: 'available' });
+      }
+    }
     
     res.json({ success: true, data: booking });
   } catch (error) {
